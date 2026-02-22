@@ -207,11 +207,11 @@ export default function LandingPage() {
             <p className="text-slate-400">Start free. Upgrade when you're ready.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
             {[
-              { name: "Starter", price: 15, desc: "For beginners starting their growth journey", icon: Zap, features: ["AI Analysis (10/mo)", "Basic Growth Recommendations", "Dashboard Access", "Email Support"], popular: false },
-              { name: "Creator", price: 39, desc: "Advanced insights and growth tools", icon: Crown, features: ["AI Analysis (50/mo)", "Advanced Growth Recommendations", "Full Dashboard Access", "Priority Email Support", "Competitor Intelligence"], popular: true },
-              { name: "Pro", price: 79, desc: "Full analytics suite for professionals and teams", icon: Star, features: ["Unlimited AI Analysis", "Full Growth Suite", "Complete Dashboard", "Priority Support", "Competitor Intelligence", "Team Features"], popular: false },
+              { name: "Free", price: 0, desc: "Get started with basic content analysis", icon: Zap, features: ["3 AI Analyses / day", "Basic Growth Insights", "Dashboard Access", "Community Support"], popular: false },
+              { name: "Pro", price: 39, desc: "Advanced insights and growth tools for serious creators", icon: Crown, features: ["Unlimited AI Analyses", "Advanced Insights & Hashtags", "Competitor Intelligence", "Full Analysis History", "Save Favorite Analyses", "Export Reports", "Priority Email Support"], popular: true },
+              { name: "Premium", price: 79, desc: "Full analytics suite for professionals and teams", icon: Star, features: ["Everything in Pro", "Deep Performance Analysis", "AI Script Suggestions", "Smart Content Calendar", "Niche Trend Alerts", "Top Creator Comparisons", "Priority Processing & Support"], popular: false },
             ].map(({ name, price, desc, icon: Icon, features, popular }) => (
               <div key={name}
                 className={`glass-card rounded-2xl p-7 relative transition-all duration-300 hover:-translate-y-1 ${popular ? "neon-border" : ""}`}
