@@ -62,7 +62,10 @@ export default function Dashboard() {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{user?.name || "User"}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-white truncate">{user?.name || "User"}</p>
+              {user?.level && <LevelBadge level={user.level} compact />}
+            </div>
             <p className="text-xs text-slate-500 truncate">{user?.email}</p>
           </div>
         </div>
