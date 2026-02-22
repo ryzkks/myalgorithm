@@ -1,0 +1,152 @@
+{
+  "design_system": {
+    "identity": "MyAlgorithm",
+    "mission": "AI-powered growth platform for social media creators",
+    "aesthetic": "Modern Dark Tech Startup",
+    "theme": "dark",
+    "principles": [
+      "Fusion over Imitation: Mix SaaS precision with Neon Cyberpunk energy",
+      "Emotion First: Evoke 'Edge' and 'Advantage'",
+      "Content is King: Data must be legible but beautiful",
+      "Negative Space: Luxurious spacing to separate heavy data",
+      "Contrast: High contrast Neon on Matte Black"
+    ]
+  },
+  "colors": {
+    "description": "A deep void black base with electric cyan/teal accents. No muddy greys.",
+    "palette": {
+      "background": {
+        "default": "#030712",
+        "paper": "#0b1121",
+        "subtle": "#111827"
+      },
+      "primary": {
+        "main": "#06b6d4",
+        "light": "#22d3ee",
+        "dark": "#0891b2",
+        "glow": "0 0 20px rgba(6, 182, 212, 0.5)"
+      },
+      "secondary": {
+        "main": "#14b8a6",
+        "light": "#2dd4bf",
+        "dark": "#0d9488"
+      },
+      "text": {
+        "primary": "#f8fafc",
+        "secondary": "#94a3b8",
+        "muted": "#64748b"
+      },
+      "border": {
+        "default": "#1e293b",
+        "highlight": "#334155"
+      },
+      "status": {
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "info": "#3b82f6"
+      }
+    },
+    "gradients": {
+      "hero": "radial-gradient(circle at center, rgba(6, 182, 212, 0.15) 0%, rgba(3, 7, 18, 0) 70%)",
+      "card_hover": "linear-gradient(45deg, rgba(6, 182, 212, 0.1) 0%, rgba(20, 184, 166, 0.05) 100%)",
+      "glass": "linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Outfit, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-5xl md:text-7xl font-bold tracking-tight text-white",
+      "h2": "text-4xl md:text-5xl font-semibold tracking-tight text-white",
+      "h3": "text-2xl md:text-3xl font-semibold tracking-tight text-white",
+      "p": "text-base md:text-lg leading-relaxed text-slate-400",
+      "small": "text-sm text-slate-500",
+      "label": "text-xs font-medium uppercase tracking-wider text-slate-500"
+    },
+    "instructions": "Import 'Outfit' from Google Fonts. Use 'Outfit' for all headings (h1-h3) and 'Inter' for body text. Ensure headings have tight tracking."
+  },
+  "layout": {
+    "container": {
+      "default": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+      "narrow": "max-w-4xl mx-auto px-4"
+    },
+    "spacing": {
+      "section_padding": "py-20 md:py-32",
+      "component_gap": "gap-8"
+    },
+    "border_radius": {
+      "card": "rounded-xl",
+      "button": "rounded-lg"
+    },
+    "grid_system": {
+      "features": "grid grid-cols-1 md:grid-cols-3 gap-8",
+      "dashboard": "grid grid-cols-1 md:grid-cols-12 gap-6"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "classes": "backdrop-blur-xl bg-white/5 border border-white/10",
+      "usage": "Use for sticky headers, modal overlays, and floating cards."
+    },
+    "shadows": {
+      "neon": "shadow-[0_0_20px_rgba(6,182,212,0.15)]",
+      "card": "shadow-lg shadow-black/20"
+    },
+    "animations": {
+      "hover_lift": "transition-all duration-300 hover:-translate-y-1 hover:shadow-cyan-500/20",
+      "fade_in": "animate-in fade-in duration-500"
+    }
+  },
+  "components": {
+    "button": {
+      "primary": "bg-cyan-500 text-black hover:bg-cyan-400 font-semibold shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all",
+      "secondary": "bg-slate-800 text-white hover:bg-slate-700 border border-slate-700",
+      "ghost": "text-slate-300 hover:text-cyan-400 hover:bg-cyan-950/30"
+    },
+    "card": {
+      "default": "bg-[#0b1121] border border-slate-800 rounded-xl p-6",
+      "glass": "backdrop-blur-md bg-slate-900/40 border border-slate-800/50 rounded-xl p-6"
+    },
+    "input": {
+      "default": "bg-slate-950/50 border-slate-800 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 rounded-lg text-white placeholder:text-slate-600"
+    }
+  },
+  "media": {
+    "image_urls": {
+      "hero_background": "https://images.unsplash.com/photo-1759231877806-c6374e55a832?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "abstract_tech": "https://images.pexels.com/photos/12537427/pexels-photo-12537427.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "creator_working": "https://images.pexels.com/photos/14540940/pexels-photo-14540940.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "analytics_viz": "https://images.unsplash.com/photo-1762281602373-58334d0ac060?crop=entropy&cs=srgb&fm=jpg&q=85"
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px, size 20px or 24px"
+    }
+  },
+  "accessibility": {
+    "contrast_check": "Ensure text-slate-400 is not used on very dark backgrounds if size is small. Use text-slate-300 for better contrast.",
+    "interactive_elements": "All buttons and links must have a focus ring (ring-cyan-500/50).",
+    "motion": "Respect prefers-reduced-motion."
+  },
+  "instructions_to_main_agent": [
+    "INSTALL: 'yarn add @fontsource/outfit @fontsource/inter' if not present, or use Google Fonts CDN.",
+    "SETUP: Configure tailwind.config.js to extend colors with the specific cyan/teal palette provided.",
+    "LAYOUT: Use 'Bento Grid' layouts for the features section. Avoid simple 3-column grids.",
+    "STYLE: Apply 'glassmorphism' classes to the sidebar and top navigation.",
+    "INTERACTION: Add 'hover_lift' classes to all cards and primary buttons.",
+    "COMPONENTS: Use Shadcn components but override styles to match the 'Dark Tech' aesthetic (remove heavy bright borders, use subtle slate-800 borders).",
+    "CHARTS: Use Recharts with the 'chart-1' to 'chart-5' CSS variables mapped to the neon palette.",
+    "TESTING: Add 'data-testid' to all interactive elements."
+  ],
+  "universal_guidelines": [
+    "Do not use generic 'center-aligned' layouts. Use asymmetry.",
+    "Use 2-3x more spacing (padding/margin) than standard.",
+    "Never use pure black (#000000) for backgrounds; use #030712 or #0A0A0A.",
+    "Dark mode only - do not implement light mode toggle unless requested.",
+    "Use 'sonner' for toast notifications."
+  ]
+}
