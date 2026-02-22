@@ -332,20 +332,27 @@ async def reset_password(request: Request):
 @api_router.post("/analyze/content")
 async def analyze_content(req: AnalyzeContentRequest, request: Request):
     user = await get_current_user(request)
+    plan = user.get("plan", "free")
+    allowed, limit, used = await check_daily_limit(user["user_id"], plan)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Daily analysis limit reached ({limit}). Upgrade to Pro for unlimited analyses.")
+    features = get_plan_features(plan)
+    # Build AI prompt based on plan level
+    base_fields = '"viral_score": <0-100>, "strengths": [3-4 strings], "weaknesses": [3-4 strings], "suggestions": [4-5 strings], "summary": "2 sentences"'
+    extra = ""
+    if features["advanced"]:
+        extra += ', "hashtag_recommendations": [5-8 optimized hashtags], "best_posting_times": [3 time slots], "engagement_prediction": "sentence"'
+    if features["deep"]:
+        extra += ', "script_suggestion": "3-4 sentence video script idea", "style_analysis": "sentence about visual/audio style", "trend_connections": [2-3 related trends]'
+    system_msg = f"""You are an expert social media content analyst. Analyze the given content and return a JSON object with exactly these fields:
+{{{base_fields}{extra}}}
+Return ONLY valid JSON, no markdown, no extra text."""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         chat = LlmChat(
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
             session_id=f"analysis-{uuid.uuid4().hex[:8]}",
-            system_message="""You are an expert social media content analyst. Analyze the given content and return a JSON object with exactly these fields:
-{
-  "viral_score": <number 0-100>,
-  "strengths": [<list of 3-4 strength strings>],
-  "weaknesses": [<list of 3-4 weakness strings>],
-  "suggestions": [<list of 4-5 actionable improvement strings>],
-  "summary": "<brief 2 sentence analysis summary>"
-}
-Return ONLY valid JSON, no markdown, no extra text."""
+            system_message=system_msg,
         ).with_model("openai", "gpt-5.2")
         prompt = f"Platform: {req.platform}\n\nContent to analyze:\n{req.content}"
         ai_response = await chat.send_message(UserMessage(text=prompt))
@@ -355,34 +362,122 @@ Return ONLY valid JSON, no markdown, no extra text."""
                 cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
                 if cleaned.endswith("```"):
                     cleaned = cleaned[:-3]
-            analysis = json.loads(cleaned)
+            analysis = json.loads(cleaned.strip())
         except json.JSONDecodeError:
-            analysis = {
-                "viral_score": 65,
-                "strengths": ["Content has engaging elements", "Good topic selection"],
-                "weaknesses": ["Could improve hook", "Pacing could be better"],
-                "suggestions": ["Add a stronger opening hook", "Include a call-to-action", "Optimize for platform algorithm"],
-                "summary": ai_response[:200]
-            }
+            analysis = {"viral_score": 65, "strengths": ["Content has engaging elements", "Good topic selection"],
+                        "weaknesses": ["Could improve hook", "Pacing could be better"],
+                        "suggestions": ["Add a stronger opening hook", "Include a call-to-action"], "summary": ai_response[:200]}
     except Exception as e:
         logger.error(f"AI analysis error: {e}")
-        analysis = {
-            "viral_score": 72,
-            "strengths": ["Relevant topic for current trends", "Good content length", "Clear messaging"],
-            "weaknesses": ["Could benefit from stronger hook", "Missing trending hashtags", "No clear CTA"],
-            "suggestions": ["Start with an attention-grabbing hook in the first 3 seconds", "Add relevant trending hashtags", "Include a clear call-to-action", "Optimize thumbnail/cover image", "Post during peak engagement hours"],
-            "summary": "Your content shows potential with good topic relevance. Focus on improving the hook and adding strategic CTAs to boost engagement."
-        }
+        analysis = {"viral_score": 72, "strengths": ["Relevant topic", "Good content length", "Clear messaging"],
+                    "weaknesses": ["Could benefit from stronger hook", "Missing trending hashtags"],
+                    "suggestions": ["Start with an attention-grabbing hook", "Add relevant trending hashtags", "Include a clear call-to-action"],
+                    "summary": "Your content shows potential. Focus on improving the hook and adding strategic CTAs."}
     analysis_record = {
         "analysis_id": f"an_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"],
         "content": req.content[:500],
         "platform": req.platform,
         "result": analysis,
+        "favorited": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.analyses.insert_one(analysis_record)
-    return {"analysis_id": analysis_record["analysis_id"], **analysis}
+    # Gamification
+    await award_xp(user["user_id"], 10, "Content analysis")
+    count = await db.analyses.count_documents({"user_id": user["user_id"]})
+    new_achievements = await check_and_award_achievements(user["user_id"], analysis_count=count, viral_score=analysis.get("viral_score", 0))
+    remaining = limit - used - 1 if limit > 0 else -1
+    return {"analysis_id": analysis_record["analysis_id"], "remaining_today": remaining,
+            "new_achievements": new_achievements, "xp_earned": 10, **analysis}
+
+@api_router.post("/analyze/video-link")
+async def analyze_video_link(req: VideoLinkRequest, request: Request):
+    user = await get_current_user(request)
+    plan = user.get("plan", "free")
+    allowed, limit, used = await check_daily_limit(user["user_id"], plan)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Daily limit reached ({limit}). Upgrade for unlimited.")
+    platform = detect_platform(req.url)
+    if not platform:
+        raise HTTPException(status_code=400, detail="Unsupported URL. Please paste a TikTok, Instagram, or YouTube link.")
+    # Extract video metadata via oEmbed + meta tags
+    video_data = {"url": req.url, "platform": platform, "title": "", "author": "", "thumbnail": "", "description": "", "hashtags": []}
+    oembed_map = {
+        "youtube": f"https://www.youtube.com/oembed?url={req.url}&format=json",
+        "tiktok": f"https://www.tiktok.com/oembed?url={req.url}",
+        "instagram": f"https://api.instagram.com/oembed/?url={req.url}",
+    }
+    async with httpx.AsyncClient(timeout=12, follow_redirects=True) as hc:
+        try:
+            oembed_resp = await hc.get(oembed_map[platform])
+            if oembed_resp.status_code == 200:
+                od = oembed_resp.json()
+                video_data["title"] = od.get("title", "")
+                video_data["author"] = od.get("author_name", "")
+                video_data["thumbnail"] = od.get("thumbnail_url", "")
+        except Exception:
+            pass
+        try:
+            page_resp = await hc.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
+            html = page_resp.text
+            og_desc = re.search(r'<meta[^>]*property=["\']og:description["\'][^>]*content=["\']([^"\']*)["\']', html)
+            og_title = re.search(r'<meta[^>]*property=["\']og:title["\'][^>]*content=["\']([^"\']*)["\']', html)
+            og_img = re.search(r'<meta[^>]*property=["\']og:image["\'][^>]*content=["\']([^"\']*)["\']', html)
+            if og_desc:
+                video_data["description"] = og_desc.group(1)[:500]
+            if og_title and not video_data["title"]:
+                video_data["title"] = og_title.group(1)
+            if og_img and not video_data["thumbnail"]:
+                video_data["thumbnail"] = og_img.group(1)
+            all_text = video_data["description"] + " " + video_data["title"]
+            video_data["hashtags"] = list(set(re.findall(r'#\w+', all_text)))[:15]
+        except Exception:
+            pass
+    # Now analyze with AI
+    features = get_plan_features(plan)
+    base_fields = '"viral_score": <0-100>, "strengths": [3-4], "weaknesses": [3-4], "suggestions": [4-5], "summary": "2 sentences"'
+    extra = ""
+    if features["advanced"]:
+        extra += ', "hashtag_recommendations": [5-8], "best_posting_times": [3], "engagement_prediction": "sentence"'
+    if features["deep"]:
+        extra += ', "script_suggestion": "3-4 sentence script", "style_analysis": "sentence", "trend_connections": [2-3]'
+    system_msg = f"You are an expert social media analyst. Return ONLY valid JSON: {{{base_fields}{extra}}}"
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(api_key=os.environ.get("EMERGENT_LLM_KEY"), session_id=f"vl-{uuid.uuid4().hex[:8]}",
+                       system_message=system_msg).with_model("openai", "gpt-5.2")
+        prompt = f"Platform: {platform}\nTitle: {video_data['title']}\nAuthor: {video_data['author']}\nDescription: {video_data['description']}\nHashtags: {', '.join(video_data['hashtags'])}\nURL: {req.url}"
+        ai_resp = await chat.send_message(UserMessage(text=prompt))
+        try:
+            cleaned = ai_resp.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+            analysis = json.loads(cleaned.strip())
+        except json.JSONDecodeError:
+            analysis = {"viral_score": 68, "strengths": ["Active on platform", "Content detected"],
+                        "weaknesses": ["Limited metadata extracted"], "suggestions": ["Optimize your caption", "Add trending hashtags"],
+                        "summary": ai_resp[:200] if ai_resp else "Analysis completed with limited data."}
+    except Exception as e:
+        logger.error(f"Video link AI error: {e}")
+        analysis = {"viral_score": 70, "strengths": ["Content is on a major platform"],
+                    "weaknesses": ["Unable to fully analyze"], "suggestions": ["Try pasting your caption text directly for deeper analysis"],
+                    "summary": "Basic analysis completed. For better results, paste your caption/script text."}
+    record = {
+        "analysis_id": f"an_{uuid.uuid4().hex[:12]}", "user_id": user["user_id"],
+        "content": req.url, "platform": platform, "video_data": video_data,
+        "result": analysis, "favorited": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.analyses.insert_one(record)
+    await award_xp(user["user_id"], 10, "Video link analysis")
+    count = await db.analyses.count_documents({"user_id": user["user_id"]})
+    new_ach = await check_and_award_achievements(user["user_id"], analysis_count=count, viral_score=analysis.get("viral_score", 0))
+    remaining = limit - used - 1 if limit > 0 else -1
+    return {"analysis_id": record["analysis_id"], "video_data": video_data, "remaining_today": remaining,
+            "new_achievements": new_ach, "xp_earned": 10, **analysis}
 
 # ── Dashboard ───────────────────────────────────────────
 @api_router.get("/dashboard/overview")
