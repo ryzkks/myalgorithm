@@ -1,69 +1,64 @@
 # MyAlgorithm - Product Requirements Document
 
 ## Overview
-AI-powered social media growth platform that analyzes content and provides actionable insights for TikTok, Instagram, and YouTube creators.
+AI-powered social media growth platform for TikTok, Instagram, and YouTube creators.
 
 ## Architecture
-- **Frontend**: React + Tailwind CSS + Shadcn UI (dark tech aesthetic, cyan/teal neon accents)
-- **Backend**: FastAPI + MongoDB (Motor async driver)
-- **Auth**: Emergent Google OAuth + JWT email/password with cookie-based sessions
-- **AI**: OpenAI GPT-5.2 via Emergent Integrations for content analysis
-- **Payments**: Stripe via Emergent Integrations for subscription billing
+- **Frontend**: React + Tailwind CSS + Shadcn UI (dark theme, cyan neon accents)
+- **Backend**: FastAPI + MongoDB
+- **Auth**: Emergent Google OAuth + JWT email/password
+- **AI**: OpenAI GPT-5.2 via Emergent Integrations
+- **Payments**: Stripe via Emergent Integrations
 
-## User Personas
-1. **Aspiring Creator**: Beginner with <10K followers, wants to understand algorithm
-2. **Growing Creator**: 10K-100K followers, wants to optimize content strategy
-3. **Professional/Team**: 100K+ followers, needs full analytics and competitor intelligence
+## Plans
+- **Free**: 3 analyses/day, basic insights, limited history (10), no competitors/favorites
+- **Pro** ($39/mo): Unlimited analyses, advanced insights + hashtags, competitors, favorites, export, full history
+- **Premium** ($79/mo): Everything in Pro + deep analysis, script suggestions, content calendar, trend alerts, profile optimization, priority processing
 
-## Core Requirements
-- Landing page with hero, features, how it works, pricing, testimonials, FAQ, footer
-- Full authentication (email/password + Google OAuth)
-- Dashboard with sidebar navigation
-- AI-powered content analysis (viral score 0-100, strengths, weaknesses, suggestions)
-- Personalized weekly growth plan
-- Competitor intelligence analysis
-- Account management (profile, password)
-- Stripe billing with 3 tiers: Starter ($15), Creator ($39), Pro ($79)
+## What's Been Implemented
 
-## What's Been Implemented (Feb 22, 2026)
-- [x] Complete landing page with all sections
-- [x] Auth system (Google OAuth + email/password registration/login)
-- [x] Protected dashboard with sidebar navigation
-- [x] Dashboard Overview with metrics cards
-- [x] AI Content Analysis using OpenAI GPT-5.2 (real AI integration)
-- [x] Growth Plan page with weekly strategy
-- [x] Competitor Intelligence page
-- [x] Account settings (profile edit, password change)
-- [x] Billing page with Stripe checkout integration
-- [x] Payment history tracking
-- [x] Responsive design (mobile + desktop)
-- [x] Dark tech aesthetic with glassmorphism
+### Phase 1 (Feb 22, 2026)
+- [x] Full landing page (hero, features, how it works, pricing, testimonials, FAQ, footer)
+- [x] Auth system (Google OAuth + email/password)
+- [x] Dashboard with sidebar navigation
+- [x] AI Content Analysis (OpenAI GPT-5.2)
+- [x] Growth Plan page
+- [x] Competitor Intelligence
+- [x] Account settings
+- [x] Billing with Stripe
 
-## Simulated/Demo Data
-- Dashboard metrics (reach score, growth rate, engagement)
-- Growth plan weekly strategy
-- Competitor analysis insights
+### Phase 2 (Feb 22, 2026)
+- [x] Plan restructuring: Free / Pro ($39) / Premium ($79)
+- [x] Plan-gated features (daily limits, competitor lock, favorites lock)
+- [x] Gamification system: XP, 8 levels (Newcomer to Algorithm Expert), 8 achievements
+- [x] Video link analysis (auto-detect TikTok/Instagram/YouTube, extract metadata via oEmbed)
+- [x] Dual analysis modes (Video Link + Text/Caption toggle)
+- [x] Enhanced AI prompts based on plan level (basic/advanced/deep)
+- [x] Skeleton loading states
+- [x] Scroll & stagger animations
+- [x] Micro-interactions (hover, transitions, reveals)
+- [x] Level badge in sidebar
+- [x] Daily usage tracker
+- [x] Achievement grid with earned/locked states
+- [x] Favorites system (Pro+ only)
+- [x] Plan gate UI for locked features
 
 ## Prioritized Backlog
-### P0 (Critical)
-- None remaining
+### P1
+- Email verification, real password reset
+- Stripe subscription lifecycle (upgrade/downgrade/cancel)
+- Streak tracking (consecutive days of analysis)
+- Export reports feature
 
-### P1 (High)
-- Real social media API integrations (TikTok, Instagram, YouTube)
-- Email verification on signup
-- Password reset via email (currently mock)
-- Stripe subscription management (upgrade/downgrade/cancel)
+### P2
+- Multi-step onboarding wizard
+- Content calendar UI
+- Trend alerts notification system
+- Historical analytics charts (Recharts)
+- Real social media API connections
 
-### P2 (Medium)
-- Content upload (image/video) for analysis
-- Historical analytics charts with Recharts
-- Team collaboration features
-- Notification system
-- Content calendar integration
-
-### P3 (Nice to Have)
+### P3
 - Apple social login
 - Dark/light mode toggle
-- Export reports as PDF
-- Mobile app version
-- Webhook integrations
+- Team collaboration features
+- Weekly insight emails
