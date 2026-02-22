@@ -268,7 +268,15 @@ async def login(req: LoginRequest, response: Response):
 @api_router.get("/auth/me")
 async def auth_me(request: Request):
     user = await get_current_user(request)
-    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "picture": user.get("picture", ""), "plan": user.get("plan", "free")}
+    plan = user.get("plan", "free")
+    xp = await get_xp(user["user_id"])
+    level = get_level_info(xp)
+    features = get_plan_features(plan)
+    return {
+        "user_id": user["user_id"], "email": user["email"], "name": user["name"],
+        "picture": user.get("picture", ""), "plan": plan,
+        "level": level, "features": features,
+    }
 
 @api_router.post("/auth/session")
 async def auth_session(request: Request, response: Response):
