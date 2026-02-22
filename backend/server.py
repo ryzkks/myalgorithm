@@ -584,19 +584,26 @@ async def get_user_stats(request: Request):
     return {"level": level, "total_analyses": count, "achievements": all_ach}
 
 # ── Growth Plan ─────────────────────────────────────────
+DEFAULT_WEEKLY = {
+    "monday": {"type": "Educational", "time": "9:00 AM", "tip": "Share a quick tip or tutorial"},
+    "tuesday": {"type": "Behind the Scenes", "time": "12:00 PM", "tip": "Show your creative process"},
+    "wednesday": {"type": "Trending Topic", "time": "3:00 PM", "tip": "Jump on a trending sound or topic"},
+    "thursday": {"type": "Storytelling", "time": "6:00 PM", "tip": "Share a personal story or case study"},
+    "friday": {"type": "Interactive", "time": "11:00 AM", "tip": "Create a poll, Q&A, or challenge"},
+    "saturday": {"type": "Collaboration", "time": "2:00 PM", "tip": "Duet or collab with another creator"},
+    "sunday": {"type": "Recap/Reflection", "time": "10:00 AM", "tip": "Weekly wins or lessons learned"},
+}
+
 @api_router.get("/growth-plan")
 async def growth_plan(request: Request):
-    await get_current_user(request)
+    user = await get_current_user(request)
+    uid = user["user_id"]
+    saved = await db.growth_plans.find_one({"user_id": uid}, {"_id": 0})
+    weekly = saved["weekly_strategy"] if saved and "weekly_strategy" in saved else DEFAULT_WEEKLY
+    saved_ideas = saved.get("saved_ideas", []) if saved else []
     return {
-        "weekly_strategy": {
-            "monday": {"type": "Educational", "time": "9:00 AM", "tip": "Share a quick tip or tutorial"},
-            "tuesday": {"type": "Behind the Scenes", "time": "12:00 PM", "tip": "Show your creative process"},
-            "wednesday": {"type": "Trending Topic", "time": "3:00 PM", "tip": "Jump on a trending sound or topic"},
-            "thursday": {"type": "Storytelling", "time": "6:00 PM", "tip": "Share a personal story or case study"},
-            "friday": {"type": "Interactive", "time": "11:00 AM", "tip": "Create a poll, Q&A, or challenge"},
-            "saturday": {"type": "Collaboration", "time": "2:00 PM", "tip": "Duet or collab with another creator"},
-            "sunday": {"type": "Recap/Reflection", "time": "10:00 AM", "tip": "Weekly wins or lessons learned"},
-        },
+        "weekly_strategy": weekly,
+        "saved_ideas": saved_ideas,
         "recommended_topics": [
             "AI tools for creators", "Growth hacking strategies",
             "Content repurposing tips", "Platform algorithm updates",
@@ -611,6 +618,141 @@ async def growth_plan(request: Request):
             "The algorithm hack nobody talks about", "Day in the life of a content creator",
             "Tools I use to go viral", "Before vs After: My content strategy",
         ],
+    }
+
+@api_router.put("/growth-plan/schedule")
+async def update_schedule(req: GrowthPlanUpdateRequest, request: Request):
+    user = await get_current_user(request)
+    uid = user["user_id"]
+    update_fields = {}
+    if req.content_type:
+        update_fields[f"weekly_strategy.{req.day}.type"] = req.content_type
+    if req.time:
+        update_fields[f"weekly_strategy.{req.day}.time"] = req.time
+    if req.tip:
+        update_fields[f"weekly_strategy.{req.day}.tip"] = req.tip
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    exists = await db.growth_plans.find_one({"user_id": uid})
+    if not exists:
+        await db.growth_plans.insert_one({"user_id": uid, "weekly_strategy": DEFAULT_WEEKLY, "saved_ideas": []})
+    await db.growth_plans.update_one({"user_id": uid}, {"$set": update_fields})
+    updated = await db.growth_plans.find_one({"user_id": uid}, {"_id": 0})
+    return updated["weekly_strategy"]
+
+@api_router.post("/growth-plan/generate-ideas")
+async def generate_ideas(req: GenerateIdeasRequest, request: Request):
+    user = await get_current_user(request)
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=os.environ.get("EMERGENT_LLM_KEY"),
+            session_id=f"ideas-{uuid.uuid4().hex[:8]}",
+            system_message='Generate viral content ideas. Return a JSON array of strings, each a short content idea. Return ONLY the JSON array, no markdown.',
+        ).with_model("openai", "gpt-5.2")
+        prompt = f"Generate {req.count} viral content ideas"
+        if req.topic:
+            prompt += f" about '{req.topic}'"
+        prompt += f" for {req.platform}. Short, catchy, specific."
+        ai_resp = await chat.send_message(UserMessage(text=prompt))
+        try:
+            cleaned = ai_resp.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+            ideas = json.loads(cleaned.strip())
+            if not isinstance(ideas, list):
+                ideas = [str(ideas)]
+        except json.JSONDecodeError:
+            ideas = [line.strip().lstrip("0123456789.-) ") for line in ai_resp.split("\n") if line.strip() and len(line.strip()) > 5][:req.count]
+    except Exception as e:
+        logger.error(f"Idea generation error: {e}")
+        ideas = ["Quick tutorial on a trending tool", "Behind the scenes of your workflow",
+                 "Myth vs reality in your niche", "3 things I wish I knew earlier",
+                 "This changed my content game", "The secret to consistency"]
+    return {"ideas": ideas[:req.count]}
+
+@api_router.post("/growth-plan/save-idea")
+async def save_idea(request: Request):
+    user = await get_current_user(request)
+    body = await request.json()
+    idea = body.get("idea", "")
+    if not idea:
+        raise HTTPException(status_code=400, detail="Idea required")
+    uid = user["user_id"]
+    exists = await db.growth_plans.find_one({"user_id": uid})
+    if not exists:
+        await db.growth_plans.insert_one({"user_id": uid, "weekly_strategy": DEFAULT_WEEKLY, "saved_ideas": []})
+    await db.growth_plans.update_one({"user_id": uid}, {"$push": {"saved_ideas": {"idea": idea, "saved_at": datetime.now(timezone.utc).isoformat()}}})
+    return {"saved": True}
+
+@api_router.delete("/growth-plan/saved-idea")
+async def delete_saved_idea(request: Request):
+    user = await get_current_user(request)
+    body = await request.json()
+    idea = body.get("idea", "")
+    await db.growth_plans.update_one({"user_id": user["user_id"]}, {"$pull": {"saved_ideas": {"idea": idea}}})
+    return {"deleted": True}
+
+# ── Social Connect & Metrics ───────────────────────────
+@api_router.post("/social/connect")
+async def connect_platform(req: ConnectPlatformRequest, request: Request):
+    user = await get_current_user(request)
+    uid = user["user_id"]
+    await db.social_connections.update_one(
+        {"user_id": uid, "platform": req.platform},
+        {"$set": {"username": req.username, "connected_at": datetime.now(timezone.utc).isoformat(), "status": "connected"}},
+        upsert=True,
+    )
+    return {"connected": True, "platform": req.platform, "username": req.username}
+
+@api_router.delete("/social/disconnect/{platform}")
+async def disconnect_platform(platform: str, request: Request):
+    user = await get_current_user(request)
+    await db.social_connections.delete_one({"user_id": user["user_id"], "platform": platform})
+    return {"disconnected": True}
+
+@api_router.get("/social/connections")
+async def get_connections(request: Request):
+    user = await get_current_user(request)
+    conns = await db.social_connections.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(10)
+    return conns
+
+@api_router.get("/social/metrics")
+async def get_social_metrics(request: Request):
+    user = await get_current_user(request)
+    uid = user["user_id"]
+    conns = await db.social_connections.find({"user_id": uid}, {"_id": 0}).to_list(10)
+    analysis_count = await db.analyses.count_documents({"user_id": uid})
+    # Simulated metrics per connected platform
+    platforms_data = []
+    for c in conns:
+        p = c["platform"]
+        seed = hash(c["username"] + p) % 1000
+        random.seed(seed)
+        platforms_data.append({
+            "platform": p, "username": c["username"],
+            "followers": random.randint(500, 50000),
+            "following": random.randint(100, 2000),
+            "posts": random.randint(20, 500),
+            "avg_likes": random.randint(50, 5000),
+            "avg_comments": random.randint(5, 500),
+            "engagement_rate": round(random.uniform(1.5, 12.0), 1),
+            "growth_30d": round(random.uniform(-2.0, 15.0), 1),
+            "top_content_type": random.choice(["Reels", "Shorts", "Stories", "Carousel", "Video"]),
+            "best_posting_day": random.choice(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]),
+            "best_posting_time": random.choice(["9 AM", "12 PM", "3 PM", "6 PM", "8 PM"]),
+        })
+        random.seed()
+    return {
+        "connected_platforms": platforms_data,
+        "total_analyses": analysis_count,
+        "summary": {
+            "total_followers": sum(p["followers"] for p in platforms_data),
+            "avg_engagement": round(sum(p["engagement_rate"] for p in platforms_data) / max(len(platforms_data), 1), 1),
+            "total_posts": sum(p["posts"] for p in platforms_data),
+        } if platforms_data else None,
     }
 
 # ── Competitors ─────────────────────────────────────────
