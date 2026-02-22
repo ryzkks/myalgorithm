@@ -11,10 +11,12 @@ import { Link } from "react-router-dom";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function Competitors() {
+  const { user } = useAuth();
   const [username, setUsername] = useState("");
   const [platform, setPlatform] = useState("instagram");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [locked, setLocked] = useState(false);
 
   const handleAnalyze = async () => {
     if (!username.trim()) {
@@ -23,12 +25,18 @@ export default function Competitors() {
     }
     setLoading(true);
     setResult(null);
+    setLocked(false);
     try {
       const res = await axios.post(`${API}/competitors/analyze`, { username, platform }, { withCredentials: true });
       setResult(res.data);
       toast.success("Competitor analysis complete!");
     } catch (err) {
-      toast.error("Analysis failed");
+      if (err.response?.status === 403) {
+        setLocked(true);
+        toast.error("Competitor analysis requires Pro plan");
+      } else {
+        toast.error("Analysis failed");
+      }
     } finally {
       setLoading(false);
     }
