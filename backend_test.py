@@ -360,7 +360,7 @@ class MyAlgorithmAPITester:
                 print("❌ Authentication failed - cannot test protected endpoints")
                 return False
             
-            # Test all protected endpoints
+            # Test all protected endpoints (logout should be last to avoid session invalidation)
             self.test_auth_endpoints()
             self.test_dashboard_endpoints() 
             self.test_content_analysis()
@@ -368,6 +368,9 @@ class MyAlgorithmAPITester:
             self.test_competitors()
             self.test_account_management()
             self.test_billing_endpoints()
+            
+            # Test logout last (this will invalidate session)
+            self.test_logout_endpoint()
             
             return True
             
