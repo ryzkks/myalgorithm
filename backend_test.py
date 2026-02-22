@@ -543,20 +543,41 @@ class MyAlgorithmAPITester:
             )
 
     def test_billing_endpoints(self):
-        """Test billing and Stripe integration"""
-        print(f"\n💳 Testing Billing & Stripe Integration")
+        """Test billing with new plan structure (Free/Pro/Premium)"""
+        print(f"\n💳 Testing Billing with New Plan Structure")
         print("=" * 40)
         
-        # Test get plans
+        # Test get plans - should return Pro and Premium (no Starter)
         success, response = self.run_test(
-            "Get billing plans",
+            "Get billing plans (Pro/Premium only)",
             "GET",
             "/billing/plans",
             200
         )
         
         if success and isinstance(response, list):
-            print(f"🎯 Available plans: {[plan.get('name', 'Unknown') for plan in response]}")
+            plan_names = [plan.get('name', 'Unknown') for plan in response]
+            print(f"🎯 Available plans: {plan_names}")
+            
+            # Verify new plan structure
+            expected_plans = ['Pro', 'Premium']
+            has_correct_plans = all(name in plan_names for name in expected_plans)
+            has_no_starter = 'Starter' not in plan_names and 'Creator' not in plan_names
+            
+            if has_correct_plans and has_no_starter:
+                print(f"   ✅ Plan structure updated correctly")
+                
+                # Check Pro plan pricing ($39)
+                pro_plan = next((p for p in response if p.get('name') == 'Pro'), None)
+                if pro_plan and pro_plan.get('price') == 39.0:
+                    print(f"   ✅ Pro plan price correct: ${pro_plan['price']}")
+                
+                # Check Premium plan pricing ($79) 
+                premium_plan = next((p for p in response if p.get('name') == 'Premium'), None)
+                if premium_plan and premium_plan.get('price') == 79.0:
+                    print(f"   ✅ Premium plan price correct: ${premium_plan['price']}")
+            else:
+                print(f"   ❌ Plan structure not updated correctly")
         
         # Test billing history
         self.run_test(
@@ -567,14 +588,14 @@ class MyAlgorithmAPITester:
             use_session=True
         )
         
-        # Test checkout creation (will create Stripe session)
+        # Test checkout creation with Pro plan
         checkout_data = {
-            "plan_id": "starter",
+            "plan_id": "pro",  # Updated to use 'pro' instead of 'starter'
             "origin_url": "https://viral-insights-19.preview.emergentagent.com"
         }
         
         success, response = self.run_test(
-            "Create Stripe checkout session",
+            "Create Stripe checkout session (Pro plan)",
             "POST",
             "/billing/checkout", 
             200,
@@ -584,6 +605,8 @@ class MyAlgorithmAPITester:
         
         if success and isinstance(response, dict) and 'url' in response:
             print(f"🎯 Checkout URL created: {response['url'][:50]}...")
+        
+        return True
 
     def test_root_endpoint(self):
         """Test root API endpoint"""
