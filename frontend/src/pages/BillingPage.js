@@ -114,9 +114,37 @@ export default function BillingPage() {
 
       {/* Plans */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="plans-grid">
+        {/* Free plan card */}
+        <div className={`glass-card rounded-2xl p-6 relative transition-all duration-300 hover:-translate-y-1 ${
+          user?.plan === "free" ? "neon-border" : ""
+        }`} data-testid="plan-free">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-slate-500/10 flex items-center justify-center">
+              <Zap className="w-[18px] h-[18px] text-slate-400" strokeWidth={1.5} />
+            </div>
+            <h3 className="font-['Outfit'] text-lg font-bold text-white">Free</h3>
+          </div>
+          <div className="mb-4">
+            <span className="text-3xl font-bold font-['Outfit'] text-white">$0</span>
+            <span className="text-slate-500 text-sm">/month</span>
+          </div>
+          <ul className="space-y-2 mb-6">
+            {["3 AI Analyses / day", "Basic Growth Insights", "Dashboard Access", "Community Support"].map((f) => (
+              <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" /> {f}
+              </li>
+            ))}
+          </ul>
+          {user?.plan === "free" ? (
+            <Button disabled className="w-full rounded-xl bg-slate-800 text-slate-400">Current Plan</Button>
+          ) : (
+            <Button disabled className="w-full rounded-xl bg-slate-800 text-slate-500">Free Tier</Button>
+          )}
+        </div>
+
         {plans.map((plan) => {
           const Icon = planIcons[plan.id] || Zap;
-          const isPopular = plan.id === "creator";
+          const isPopular = plan.id === "pro";
           const isCurrent = user?.plan === plan.id;
           return (
             <div key={plan.id}
