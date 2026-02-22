@@ -228,8 +228,8 @@ export default function LandingPage() {
                 </div>
                 <p className="text-sm text-slate-400 mb-4">{desc}</p>
                 <div className="mb-6">
-                  <span className="text-4xl font-bold font-['Outfit'] text-white">${price}</span>
-                  <span className="text-slate-500">/month</span>
+                  <span className="text-4xl font-bold font-['Outfit'] text-white">{price === 0 ? "Free" : `$${price}`}</span>
+                  {price > 0 && <span className="text-slate-500">/month</span>}
                 </div>
                 <ul className="space-y-2.5 mb-6">
                   {features.map((f) => (
