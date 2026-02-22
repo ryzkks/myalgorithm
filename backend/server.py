@@ -80,6 +80,13 @@ class GenerateIdeasRequest(BaseModel):
     platform: str = "general"
     count: int = 6
 
+class FavoriteRequest(BaseModel):
+    analysis_id: str
+
+class ConnectPlatformRequest(BaseModel):
+    platform: str
+    username: str
+
 # ── Plans & Features ────────────────────────────────────
 PLANS = {
     "pro": {
