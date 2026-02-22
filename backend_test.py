@@ -274,6 +274,101 @@ class MyAlgorithmAPITester:
                 print(f"   📈 Viral Score: {response['viral_score']}")
             if 'xp_earned' in response:
                 print(f"   ⭐ XP Earned: {response['xp_earned']}")
+    def test_favorites_with_plan_gating(self):
+        """Test favorites feature with plan gating"""
+        print(f"\n⭐ Testing Favorites with Plan Gating")
+        print("=" * 40)
+        
+        # First, we need an analysis to favorite
+        test_content = {
+            "content": "Sample content for favoriting test",
+            "platform": "tiktok"
+        }
+        
+        analysis_success, analysis_response = self.run_test(
+            "Create analysis for favoriting",
+            "POST",
+            "/analyze/content",
+            200,
+            data=test_content,
+            use_session=True
+        )
+        
+        if analysis_success and isinstance(analysis_response, dict):
+            analysis_id = analysis_response.get('analysis_id')
+            
+            if analysis_id:
+                # Check user's plan for favorites
+                auth_success, auth_response = self.run_test(
+                    "Check user plan for favorites",
+                    "GET", 
+                    "/auth/me",
+                    200,
+                    use_session=True
+                )
+                
+                if auth_success and isinstance(auth_response, dict):
+                    features = auth_response.get('features', {})
+                    favorites_allowed = features.get('favorites', False)
+                    plan = auth_response.get('plan', 'free')
+                    
+                    print(f"   👤 User plan: {plan}")
+                    print(f"   ⭐ Favorites feature: {favorites_allowed}")
+                    
+                    if favorites_allowed:
+                        expected_status = 200
+                        test_name = "Toggle favorite (Pro/Premium user)"
+                    else:
+                        expected_status = 403
+                        test_name = "Toggle favorite (Free user - should be blocked)"
+                    
+                    favorite_data = {"analysis_id": analysis_id}
+                    
+                    success, response = self.run_test(
+                        test_name,
+                        "POST",
+                        "/analyses/favorite",
+                        expected_status,
+                        data=favorite_data,
+                        use_session=True
+                    )
+                    
+                    if success and expected_status == 200:
+                        print(f"🎯 Favorite toggled successfully")
+                    elif success and expected_status == 403:
+                        print(f"🎯 Plan gating working correctly - free user blocked")
+                    
+                    return success
+        
+        return False
+
+    def test_user_stats_and_achievements(self):
+        """Test user stats and achievements endpoint"""
+        print(f"\n📊 Testing User Stats and Achievements")  
+        print("=" * 40)
+        
+        success, response = self.run_test(
+            "Get user stats and achievements",
+            "GET",
+            "/user/stats",
+            200,
+            use_session=True
+        )
+        
+        if success and isinstance(response, dict):
+            print(f"🎯 User Stats:")
+            if 'level' in response:
+                level_info = response['level']
+                print(f"   🎖️ Level: {level_info.get('level', 'N/A')} - {level_info.get('name', 'N/A')} ({level_info.get('xp', 0)} XP)")
+            if 'total_analyses' in response:
+                print(f"   📊 Total analyses: {response['total_analyses']}")
+            if 'achievements' in response:
+                earned = sum(1 for ach in response['achievements'] if ach.get('earned', False))
+                total = len(response['achievements'])
+                print(f"   🏆 Achievements: {earned}/{total} earned")
+        
+        return success
+
         
         return success
         
