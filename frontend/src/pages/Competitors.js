@@ -79,7 +79,20 @@ export default function Competitors() {
       </div>
 
       {/* Results */}
-      {!result && !loading && (
+      {locked && (
+        <div className="glass-card rounded-2xl p-10 flex flex-col items-center justify-center text-center" data-testid="competitor-locked">
+          <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4">
+            <Lock className="w-6 h-6 text-cyan-400" />
+          </div>
+          <h3 className="font-['Outfit'] text-lg font-bold text-white mb-2">Pro Feature</h3>
+          <p className="text-sm text-slate-400 mb-5 max-w-sm">Competitor Intelligence requires Pro plan or higher. Upgrade to analyze competitor strategies.</p>
+          <Link to="/dashboard/billing" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+            Upgrade Now <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
+      {!result && !loading && !locked && (
         <div className="glass-card rounded-2xl p-10 flex flex-col items-center justify-center text-center">
           <Users className="w-12 h-12 text-slate-600 mb-4" />
           <p className="text-slate-400">Enter a competitor's username to get insights</p>
