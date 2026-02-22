@@ -67,7 +67,7 @@ class FavoriteRequest(BaseModel):
 # ── Plans & Features ────────────────────────────────────
 PLANS = {
     "pro": {
-        "name": "Pro", "price": 39.00, "currency": "usd",
+        "name": "Pro", "price_monthly": 19.00, "price_yearly": 190.00, "currency": "usd",
         "features": [
             "Unlimited AI Analyses", "Advanced Insights & Hashtags",
             "Competitor Intelligence", "Full Analysis History",
@@ -75,7 +75,7 @@ PLANS = {
         ],
     },
     "premium": {
-        "name": "Premium", "price": 79.00, "currency": "usd",
+        "name": "Premium", "price_monthly": 49.00, "price_yearly": 490.00, "currency": "usd",
         "features": [
             "Everything in Pro", "Deep Performance Analysis",
             "AI Script Suggestions", "Smart Content Calendar",
