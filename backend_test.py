@@ -147,6 +147,11 @@ class MyAlgorithmAPITester:
             200,
             use_session=True
         )
+
+    def test_logout_endpoint(self):
+        """Test logout endpoint (should be called last)"""
+        print(f"\n🔐 Testing Logout (Final)")
+        print("=" * 40)
         
         # Test logout
         self.run_test(
