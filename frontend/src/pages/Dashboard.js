@@ -1,7 +1,8 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, Sparkles, TrendingUp, Users, UserCircle, CreditCard, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Sparkles, TrendingUp, Users, UserCircle, CreditCard, LogOut, Menu, X, Trophy } from "lucide-react";
 import { useState } from "react";
+import { LevelBadge, PlanBadge } from "@/components/GamificationPanel";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Overview", end: true },
