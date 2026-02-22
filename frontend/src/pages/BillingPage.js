@@ -8,7 +8,7 @@ import { CreditCard, Check, Crown, Zap, Star, Loader2 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const planIcons = { starter: Zap, creator: Crown, pro: Star };
+const planIcons = { pro: Crown, premium: Star };
 
 export default function BillingPage() {
   const { user, refreshUser } = useAuth();
