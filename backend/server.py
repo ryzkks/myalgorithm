@@ -62,8 +62,23 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
-class FavoriteRequest(BaseModel):
-    analysis_id: str
+class OnboardingRequest(BaseModel):
+    user_type: str = ""
+    goals: List[str] = []
+    platforms: List[str] = []
+    niche: str = ""
+    content_types: List[str] = []
+
+class GrowthPlanUpdateRequest(BaseModel):
+    day: str
+    content_type: str = ""
+    time: str = ""
+    tip: str = ""
+
+class GenerateIdeasRequest(BaseModel):
+    topic: str = ""
+    platform: str = "general"
+    count: int = 6
 
 # ── Plans & Features ────────────────────────────────────
 PLANS = {
