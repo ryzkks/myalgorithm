@@ -52,6 +52,7 @@ class CompetitorRequest(BaseModel):
 class CheckoutRequest(BaseModel):
     plan_id: str
     origin_url: str
+    billing_cycle: str = "monthly"
 
 class UpdateProfileRequest(BaseModel):
     name: Optional[str] = None
