@@ -357,8 +357,8 @@ class MyAlgorithmAPITester:
                 print(f"   💡 Topics: {', '.join(topics)}")
 
     def test_competitors(self):
-        """Test competitor analysis (mocked data)"""
-        print(f"\n👥 Testing Competitor Analysis (Mocked Data)")
+        """Test competitor analysis with plan gating"""
+        print(f"\n👥 Testing Competitor Analysis with Plan Gating")
         print("=" * 40)
         
         competitor_data = {
@@ -366,21 +366,51 @@ class MyAlgorithmAPITester:
             "platform": "instagram"
         }
         
-        success, response = self.run_test(
-            "Analyze competitor",
-            "POST",
-            "/competitors/analyze",
+        # First check user's plan
+        auth_success, auth_response = self.run_test(
+            "Check user plan for competitors",
+            "GET",
+            "/auth/me",
             200,
-            data=competitor_data,
             use_session=True
         )
         
-        if success and isinstance(response, dict):
-            print(f"🎯 Competitor Analysis:")
-            if 'posting_frequency' in response:
-                print(f"   📊 Posting frequency: {response['posting_frequency']}")
-            if 'avg_engagement_rate' in response:
-                print(f"   💬 Engagement rate: {response['avg_engagement_rate']}")
+        if auth_success and isinstance(auth_response, dict):
+            plan = auth_response.get('plan', 'free') 
+            features = auth_response.get('features', {})
+            competitors_allowed = features.get('competitors', False)
+            
+            print(f"   👤 User plan: {plan}")
+            print(f"   🔓 Competitors feature: {competitors_allowed}")
+            
+            if competitors_allowed:
+                # Should succeed for Pro/Premium users
+                expected_status = 200
+                test_name = "Analyze competitor (Pro/Premium user)"
+            else:
+                # Should fail with 403 for free users
+                expected_status = 403
+                test_name = "Analyze competitor (Free user - should be blocked)"
+            
+            success, response = self.run_test(
+                test_name,
+                "POST",
+                "/competitors/analyze",
+                expected_status,
+                data=competitor_data,
+                use_session=True
+            )
+            
+            if success and expected_status == 200 and isinstance(response, dict):
+                print(f"🎯 Competitor Analysis:")
+                if 'posting_frequency' in response:
+                    print(f"   📊 Posting frequency: {response['posting_frequency']}")
+                if 'avg_engagement_rate' in response:
+                    print(f"   💬 Engagement rate: {response['avg_engagement_rate']}")
+            elif success and expected_status == 403:
+                print(f"🎯 Plan gating working correctly - free user blocked")
+        
+        return True
 
     def test_account_management(self):
         """Test account management endpoints"""
