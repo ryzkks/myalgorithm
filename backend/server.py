@@ -161,6 +161,81 @@ def set_session_cookie(response: Response, token: str):
         secure=True, samesite="none", path="/", max_age=7*24*60*60,
     )
 
+# ── Gamification Helpers ────────────────────────────────
+def get_level_info(xp: int) -> dict:
+    current = LEVELS[0]
+    for lv in LEVELS:
+        if xp >= lv["xp"]:
+            current = lv
+    nxt = None
+    for lv in LEVELS:
+        if lv["xp"] > xp:
+            nxt = lv
+            break
+    progress = 0
+    if nxt:
+        range_xp = nxt["xp"] - current["xp"]
+        progress = ((xp - current["xp"]) / range_xp * 100) if range_xp > 0 else 100
+    else:
+        progress = 100
+    return {"level": current["level"], "name": current["name"], "xp": xp,
+            "next_xp": nxt["xp"] if nxt else None, "next_name": nxt["name"] if nxt else None,
+            "progress": round(progress, 1)}
+
+async def award_xp(user_id: str, amount: int, reason: str):
+    await db.user_stats.update_one(
+        {"user_id": user_id},
+        {"$inc": {"xp": amount}, "$setOnInsert": {"user_id": user_id}},
+        upsert=True,
+    )
+
+async def get_xp(user_id: str) -> int:
+    s = await db.user_stats.find_one({"user_id": user_id}, {"_id": 0})
+    return s.get("xp", 0) if s else 0
+
+async def check_and_award_achievements(user_id: str, analysis_count: int = 0, viral_score: int = 0):
+    earned = await db.user_achievements.find({"user_id": user_id}, {"_id": 0}).to_list(100)
+    earned_ids = {a["achievement_id"] for a in earned}
+    new = []
+    checks = [
+        ("first_analysis", analysis_count >= 1),
+        ("analysis_10", analysis_count >= 10),
+        ("analysis_25", analysis_count >= 25),
+        ("viral_80", viral_score >= 80),
+        ("viral_95", viral_score >= 95),
+    ]
+    for aid, cond in checks:
+        if cond and aid not in earned_ids:
+            new.append(aid)
+            await db.user_achievements.insert_one({
+                "user_id": user_id, "achievement_id": aid,
+                "earned_at": datetime.now(timezone.utc).isoformat(),
+            })
+            await award_xp(user_id, ACHIEVEMENTS_DEF[aid]["xp"], f"Achievement: {ACHIEVEMENTS_DEF[aid]['name']}")
+    return new
+
+async def check_daily_limit(user_id: str, plan: str) -> tuple:
+    features = PLAN_FEATURES.get(plan, PLAN_FEATURES["free"])
+    limit = features["daily_limit"]
+    if limit == -1:
+        return True, -1, 0
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    count = await db.analyses.count_documents({"user_id": user_id, "created_at": {"$gte": today_start}})
+    return count < limit, limit, count
+
+def get_plan_features(plan: str) -> dict:
+    return PLAN_FEATURES.get(plan, PLAN_FEATURES["free"])
+
+def detect_platform(url: str) -> Optional[str]:
+    u = url.lower().strip()
+    if "youtube.com" in u or "youtu.be" in u:
+        return "youtube"
+    if "tiktok.com" in u or "vm.tiktok.com" in u:
+        return "tiktok"
+    if "instagram.com" in u:
+        return "instagram"
+    return None
+
 # ── Auth Routes ─────────────────────────────────────────
 @api_router.post("/auth/register")
 async def register(req: RegisterRequest, response: Response):
