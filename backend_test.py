@@ -635,8 +635,12 @@ class MyAlgorithmAPITester:
             self.test_auth_endpoints()
             self.test_dashboard_endpoints() 
             self.test_content_analysis()
+            self.test_video_link_analysis()
+            self.test_daily_limit_for_free_users()
             self.test_growth_plan()
             self.test_competitors()
+            self.test_favorites_with_plan_gating()
+            self.test_user_stats_and_achievements()
             self.test_account_management()
             self.test_billing_endpoints()
             
