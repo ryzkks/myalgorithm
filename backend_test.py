@@ -139,14 +139,27 @@ class MyAlgorithmAPITester:
         print(f"\n🔐 Testing Auth Endpoints")
         print("=" * 40)
         
-        # Test /auth/me
-        self.run_test(
-            "Get current user info",
+        # Test /auth/me - should return level and features data
+        success, response = self.run_test(
+            "Get current user info with level/features",
             "GET",
             "/auth/me", 
             200,
             use_session=True
         )
+        
+        if success and isinstance(response, dict):
+            print(f"🎯 User profile includes:")
+            if 'level' in response:
+                level_info = response['level']
+                print(f"   🎖️ Level: {level_info.get('level', 'N/A')} - {level_info.get('name', 'N/A')} ({level_info.get('xp', 0)} XP)")
+            if 'features' in response:
+                features = response['features']
+                print(f"   ⚡ Features: daily_limit={features.get('daily_limit', 'N/A')}, competitors={features.get('competitors', False)}, favorites={features.get('favorites', False)}")
+            if 'plan' in response:
+                print(f"   💳 Plan: {response['plan']}")
+        
+        return success
 
     def test_logout_endpoint(self):
         """Test logout endpoint (should be called last)"""
