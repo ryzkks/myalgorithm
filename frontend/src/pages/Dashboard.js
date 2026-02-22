@@ -1,13 +1,14 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, Sparkles, TrendingUp, Users, UserCircle, CreditCard, LogOut, Menu, X, Trophy } from "lucide-react";
+import { LayoutDashboard, Sparkles, TrendingUp, Users, UserCircle, CreditCard, LogOut, Menu, X, Trophy, BarChart3 } from "lucide-react";
 import { useState } from "react";
-import { LevelBadge, PlanBadge } from "@/components/GamificationPanel";
+import { LevelBadge } from "@/components/GamificationPanel";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Overview", end: true },
   { to: "/dashboard/analyze", icon: Sparkles, label: "Analyze Content" },
   { to: "/dashboard/growth-plan", icon: TrendingUp, label: "Growth Plan" },
+  { to: "/dashboard/metrics", icon: BarChart3, label: "Metrics" },
   { to: "/dashboard/competitors", icon: Users, label: "Competitors" },
   { to: "/dashboard/account", icon: UserCircle, label: "Account" },
   { to: "/dashboard/billing", icon: CreditCard, label: "Billing" },
