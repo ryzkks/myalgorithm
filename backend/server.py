@@ -781,7 +781,14 @@ async def analyze_competitor(req: CompetitorRequest, request: Request):
 # ── Billing ─────────────────────────────────────────────
 @api_router.get("/billing/plans")
 async def get_plans():
-    return [{"id": k, **v} for k, v in PLANS.items()]
+    result = []
+    for k, v in PLANS.items():
+        result.append({
+            "id": k, "name": v["name"], "currency": v["currency"],
+            "price_monthly": v["price_monthly"], "price_yearly": v["price_yearly"],
+            "features": v["features"],
+        })
+    return result
 
 @api_router.post("/billing/checkout")
 async def create_checkout(req: CheckoutRequest, request: Request):
@@ -789,6 +796,7 @@ async def create_checkout(req: CheckoutRequest, request: Request):
     if req.plan_id not in PLANS:
         raise HTTPException(status_code=400, detail="Invalid plan")
     plan = PLANS[req.plan_id]
+    price = plan["price_yearly"] if req.billing_cycle == "yearly" else plan["price_monthly"]
     try:
         from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
         host_url = str(request.base_url).rstrip("/")
@@ -800,11 +808,11 @@ async def create_checkout(req: CheckoutRequest, request: Request):
         success_url = f"{req.origin_url}/dashboard/billing?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{req.origin_url}/dashboard/billing"
         checkout_req = CheckoutSessionRequest(
-            amount=plan["price"],
+            amount=price,
             currency=plan["currency"],
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata={"user_id": user["user_id"], "plan_id": req.plan_id, "plan_name": plan["name"]}
+            metadata={"user_id": user["user_id"], "plan_id": req.plan_id, "plan_name": plan["name"], "billing_cycle": req.billing_cycle}
         )
         session = await stripe_checkout.create_checkout_session(checkout_req)
         await db.payment_transactions.insert_one({
@@ -812,8 +820,9 @@ async def create_checkout(req: CheckoutRequest, request: Request):
             "user_id": user["user_id"],
             "plan_id": req.plan_id,
             "plan_name": plan["name"],
-            "amount": plan["price"],
+            "amount": price,
             "currency": plan["currency"],
+            "billing_cycle": req.billing_cycle,
             "session_id": session.session_id,
             "payment_status": "initiated",
             "created_at": datetime.now(timezone.utc).isoformat(),
