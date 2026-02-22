@@ -57,6 +57,16 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
+class VideoLinkRequest(BaseModel):
+    url: str
+
+class OnboardingRequest(BaseModel):
+    user_type: str
+    goals: List[str]
+    platforms: List[str]
+    niche: str
+    content_types: List[str]
+
 # ── Plans ───────────────────────────────────────────────
 PLANS = {
     "starter": {"name": "Starter", "price": 15.00, "currency": "usd", "features": ["AI Analysis (10/mo)", "Basic Growth Recommendations", "Dashboard Access", "Email Support"]},
