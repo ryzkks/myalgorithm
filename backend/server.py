@@ -483,14 +483,28 @@ async def analyze_video_link(req: VideoLinkRequest, request: Request):
 @api_router.get("/dashboard/overview")
 async def dashboard_overview(request: Request):
     user = await get_current_user(request)
-    analysis_count = await db.analyses.count_documents({"user_id": user["user_id"]})
+    uid = user["user_id"]
+    plan = user.get("plan", "free")
+    analysis_count = await db.analyses.count_documents({"user_id": uid})
+    xp = await get_xp(uid)
+    level = get_level_info(xp)
+    achievements = await db.user_achievements.find({"user_id": uid}, {"_id": 0}).to_list(100)
+    allowed, limit, used = await check_daily_limit(uid, plan)
+    # Compute avg viral score
+    pipeline = [{"$match": {"user_id": uid}}, {"$group": {"_id": None, "avg_score": {"$avg": "$result.viral_score"}}}]
+    avg_result = await db.analyses.aggregate(pipeline).to_list(1)
+    avg_score = round(avg_result[0]["avg_score"], 1) if avg_result and avg_result[0].get("avg_score") else 0
     return {
         "metrics": {
-            "reach_score": 78,
-            "growth_rate": 12.5,
-            "engagement_score": 85,
-            "total_analyses": analysis_count,
+            "reach_score": 78, "growth_rate": 12.5, "engagement_score": 85,
+            "total_analyses": analysis_count, "avg_viral_score": avg_score,
         },
+        "level": level,
+        "achievements": [{"achievement_id": a["achievement_id"], "earned_at": a["earned_at"],
+                          **ACHIEVEMENTS_DEF.get(a["achievement_id"], {})} for a in achievements],
+        "all_achievements": [{**v, "id": k} for k, v in ACHIEVEMENTS_DEF.items()],
+        "plan": plan,
+        "daily_usage": {"used": used, "limit": limit, "remaining": limit - used if limit > 0 else -1},
         "quick_actions": [
             {"label": "Analyze New Content", "link": "/dashboard/analyze"},
             {"label": "View Growth Plan", "link": "/dashboard/growth-plan"},
@@ -501,10 +515,50 @@ async def dashboard_overview(request: Request):
 @api_router.get("/dashboard/analyses")
 async def dashboard_analyses(request: Request):
     user = await get_current_user(request)
+    plan = user.get("plan", "free")
+    features = get_plan_features(plan)
+    limit = features["history_limit"] if features["history_limit"] > 0 else 100
     analyses = await db.analyses.find(
         {"user_id": user["user_id"]}, {"_id": 0}
-    ).sort("created_at", -1).to_list(20)
+    ).sort("created_at", -1).to_list(limit)
     return analyses
+
+# ── Favorites ───────────────────────────────────────────
+@api_router.post("/analyses/favorite")
+async def toggle_favorite(req: FavoriteRequest, request: Request):
+    user = await get_current_user(request)
+    plan = user.get("plan", "free")
+    if not get_plan_features(plan)["favorites"]:
+        raise HTTPException(status_code=403, detail="Favorites require Pro plan or higher")
+    analysis = await db.analyses.find_one({"analysis_id": req.analysis_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    new_state = not analysis.get("favorited", False)
+    await db.analyses.update_one({"analysis_id": req.analysis_id}, {"$set": {"favorited": new_state}})
+    return {"favorited": new_state}
+
+@api_router.get("/analyses/favorites")
+async def get_favorites(request: Request):
+    user = await get_current_user(request)
+    favs = await db.analyses.find(
+        {"user_id": user["user_id"], "favorited": True}, {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    return favs
+
+# ── User Stats & Achievements ──────────────────────────
+@api_router.get("/user/stats")
+async def get_user_stats(request: Request):
+    user = await get_current_user(request)
+    xp = await get_xp(user["user_id"])
+    level = get_level_info(xp)
+    count = await db.analyses.count_documents({"user_id": user["user_id"]})
+    achievements = await db.user_achievements.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(100)
+    earned_ids = {a["achievement_id"] for a in achievements}
+    all_ach = []
+    for k, v in ACHIEVEMENTS_DEF.items():
+        all_ach.append({"id": k, **v, "earned": k in earned_ids,
+                        "earned_at": next((a["earned_at"] for a in achievements if a["achievement_id"] == k), None)})
+    return {"level": level, "total_analyses": count, "achievements": all_ach}
 
 # ── Growth Plan ─────────────────────────────────────────
 @api_router.get("/growth-plan")
