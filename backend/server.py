@@ -593,8 +593,10 @@ async def growth_plan(request: Request):
 # ── Competitors ─────────────────────────────────────────
 @api_router.post("/competitors/analyze")
 async def analyze_competitor(req: CompetitorRequest, request: Request):
-    await get_current_user(request)
-    import random
+    user = await get_current_user(request)
+    plan = user.get("plan", "free")
+    if not get_plan_features(plan)["competitors"]:
+        raise HTTPException(status_code=403, detail="Competitor analysis requires Pro plan or higher. Upgrade to unlock.")
     return {
         "username": req.username,
         "platform": req.platform,
