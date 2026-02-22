@@ -176,18 +176,31 @@ class MyAlgorithmAPITester:
         )
 
     def test_dashboard_endpoints(self):
-        """Test dashboard endpoints"""
-        print(f"\n📊 Testing Dashboard Endpoints")
+        """Test dashboard endpoints with gamification"""
+        print(f"\n📊 Testing Dashboard Endpoints with Gamification")
         print("=" * 40)
         
-        # Test dashboard overview
-        self.run_test(
-            "Dashboard overview",
+        # Test dashboard overview - should return level, achievements, daily_usage
+        success, response = self.run_test(
+            "Dashboard overview with gamification",
             "GET",
             "/dashboard/overview",
             200,
             use_session=True
         )
+        
+        if success and isinstance(response, dict):
+            print(f"🎯 Dashboard overview includes:")
+            if 'level' in response:
+                level_info = response['level']
+                print(f"   🎖️ Level: {level_info.get('level', 'N/A')} - {level_info.get('name', 'N/A')}")
+            if 'achievements' in response:
+                earned_count = len(response['achievements'])
+                total_count = len(response.get('all_achievements', []))
+                print(f"   🏆 Achievements: {earned_count}/{total_count} earned")
+            if 'daily_usage' in response:
+                usage = response['daily_usage']
+                print(f"   ⚡ Daily usage: {usage.get('used', 0)}/{usage.get('limit', 0)} analyses")
         
         # Test dashboard analyses
         self.run_test(
