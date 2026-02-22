@@ -12,11 +12,12 @@ from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
+import re
+import random
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
@@ -41,6 +42,9 @@ class AnalyzeContentRequest(BaseModel):
     content: str
     platform: str = "general"
 
+class VideoLinkRequest(BaseModel):
+    url: str
+
 class CompetitorRequest(BaseModel):
     username: str
     platform: str = "instagram"
@@ -57,21 +61,56 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
-class VideoLinkRequest(BaseModel):
-    url: str
+class FavoriteRequest(BaseModel):
+    analysis_id: str
 
-class OnboardingRequest(BaseModel):
-    user_type: str
-    goals: List[str]
-    platforms: List[str]
-    niche: str
-    content_types: List[str]
-
-# ── Plans ───────────────────────────────────────────────
+# ── Plans & Features ────────────────────────────────────
 PLANS = {
-    "starter": {"name": "Starter", "price": 15.00, "currency": "usd", "features": ["AI Analysis (10/mo)", "Basic Growth Recommendations", "Dashboard Access", "Email Support"]},
-    "creator": {"name": "Creator", "price": 39.00, "currency": "usd", "features": ["AI Analysis (50/mo)", "Advanced Growth Recommendations", "Full Dashboard Access", "Priority Email Support", "Competitor Intelligence"]},
-    "pro": {"name": "Pro", "price": 79.00, "currency": "usd", "features": ["Unlimited AI Analysis", "Full Growth Suite", "Complete Dashboard", "Priority Support", "Competitor Intelligence", "Team Features"]},
+    "pro": {
+        "name": "Pro", "price": 39.00, "currency": "usd",
+        "features": [
+            "Unlimited AI Analyses", "Advanced Insights & Hashtags",
+            "Competitor Intelligence", "Full Analysis History",
+            "Save Favorite Analyses", "Export Reports", "Priority Email Support",
+        ],
+    },
+    "premium": {
+        "name": "Premium", "price": 79.00, "currency": "usd",
+        "features": [
+            "Everything in Pro", "Deep Performance Analysis",
+            "AI Script Suggestions", "Smart Content Calendar",
+            "Niche Trend Alerts", "Profile Optimization AI",
+            "Top Creator Comparisons", "Priority Processing", "Priority Support",
+        ],
+    },
+}
+
+PLAN_FEATURES = {
+    "free": {"daily_limit": 3, "history_limit": 10, "competitors": False, "favorites": False, "advanced": False, "deep": False},
+    "pro": {"daily_limit": -1, "history_limit": -1, "competitors": True, "favorites": True, "advanced": True, "deep": False},
+    "premium": {"daily_limit": -1, "history_limit": -1, "competitors": True, "favorites": True, "advanced": True, "deep": True},
+}
+
+LEVELS = [
+    {"level": 1, "name": "Newcomer", "xp": 0},
+    {"level": 2, "name": "Explorer", "xp": 50},
+    {"level": 3, "name": "Creator", "xp": 150},
+    {"level": 4, "name": "Influencer", "xp": 300},
+    {"level": 5, "name": "Trendsetter", "xp": 500},
+    {"level": 6, "name": "Viral Maker", "xp": 800},
+    {"level": 7, "name": "Growth Master", "xp": 1200},
+    {"level": 8, "name": "Algorithm Expert", "xp": 2000},
+]
+
+ACHIEVEMENTS_DEF = {
+    "first_analysis": {"name": "First Steps", "desc": "Complete your first analysis", "xp": 25, "icon": "sparkles"},
+    "analysis_10": {"name": "Content Connoisseur", "desc": "Complete 10 analyses", "xp": 50, "icon": "bar-chart"},
+    "analysis_25": {"name": "Analysis Pro", "desc": "Complete 25 analyses", "xp": 100, "icon": "trophy"},
+    "streak_3": {"name": "On a Roll", "desc": "Analyze 3 days in a row", "xp": 30, "icon": "flame"},
+    "streak_7": {"name": "Week Warrior", "desc": "Analyze 7 days in a row", "xp": 75, "icon": "zap"},
+    "viral_80": {"name": "Almost Viral", "desc": "Score above 80 on an analysis", "xp": 40, "icon": "trending-up"},
+    "viral_95": {"name": "Viral Genius", "desc": "Score above 95 on an analysis", "xp": 100, "icon": "crown"},
+    "pro_upgrade": {"name": "Going Pro", "desc": "Upgrade to a paid plan", "xp": 50, "icon": "star"},
 }
 
 # ── Auth Helpers ────────────────────────────────────────
