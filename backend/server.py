@@ -600,8 +600,6 @@ async def analyze_competitor(req: CompetitorRequest, request: Request):
     return {
         "username": req.username,
         "platform": req.platform,
-        "posting_frequency": f"{random.randint(3, 7)} posts/week",
-        "avg_engagement_rate": f"{random.uniform(2.5, 8.5):.1f}%",
         "content_themes": ["Educational content", "Behind the scenes", "Trending challenges", "Product reviews"],
         "growth_trend": f"+{random.randint(500, 5000)} followers/month",
         "top_performing_content": [
