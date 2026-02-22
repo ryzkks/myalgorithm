@@ -212,8 +212,8 @@ class MyAlgorithmAPITester:
         )
 
     def test_content_analysis(self):
-        """Test AI content analysis (real OpenAI integration)"""
-        print(f"\n🤖 Testing Content Analysis (Real AI)")
+        """Test AI content analysis and XP system"""
+        print(f"\n🤖 Testing Content Analysis with XP System")
         print("=" * 40)
         
         test_content = {
@@ -222,7 +222,7 @@ class MyAlgorithmAPITester:
         }
         
         success, response = self.run_test(
-            "AI Content Analysis",
+            "AI Content Analysis with XP rewards",
             "POST",
             "/analyze/content", 
             200,
@@ -236,6 +236,103 @@ class MyAlgorithmAPITester:
                 print(f"   📈 Viral Score: {response['viral_score']}")
             if 'summary' in response:
                 print(f"   📝 Summary: {response['summary'][:100]}...")
+            if 'xp_earned' in response:
+                print(f"   ⭐ XP Earned: {response['xp_earned']}")
+            if 'remaining_today' in response:
+                print(f"   ⚡ Remaining today: {response['remaining_today']}")
+            if 'new_achievements' in response and response['new_achievements']:
+                print(f"   🏆 New achievements: {response['new_achievements']}")
+        
+        return success
+
+    def test_video_link_analysis(self):
+        """Test new video link analysis feature"""
+        print(f"\n🎬 Testing Video Link Analysis")
+        print("=" * 40)
+        
+        # Test with a TikTok-like URL
+        video_data = {
+            "url": "https://www.tiktok.com/@user/video/7000000000000000000"
+        }
+        
+        success, response = self.run_test(
+            "Video Link Analysis", 
+            "POST",
+            "/analyze/video-link",
+            200,
+            data=video_data,
+            use_session=True
+        )
+        
+        if success and isinstance(response, dict):
+            print(f"🎯 Video Analysis Results:")
+            if 'video_data' in response:
+                vd = response['video_data']
+                print(f"   🎬 Platform: {vd.get('platform', 'N/A')}")
+                print(f"   📝 Title: {vd.get('title', 'N/A')[:50]}...")
+            if 'viral_score' in response:
+                print(f"   📈 Viral Score: {response['viral_score']}")
+            if 'xp_earned' in response:
+                print(f"   ⭐ XP Earned: {response['xp_earned']}")
+        
+        return success
+        
+    def test_daily_limit_for_free_users(self):
+        """Test daily limit enforcement for free users"""
+        print(f"\n⏰ Testing Daily Limit for Free Users")
+        print("=" * 40)
+        
+        # Check if user is on free plan and has used analyses
+        auth_success, auth_response = self.run_test(
+            "Check user plan and usage",
+            "GET",
+            "/auth/me",
+            200,
+            use_session=True
+        )
+        
+        if auth_success and isinstance(auth_response, dict):
+            plan = auth_response.get('plan', 'free')
+            features = auth_response.get('features', {})
+            daily_limit = features.get('daily_limit', 3)
+            
+            print(f"   👤 User plan: {plan}")
+            print(f"   ⚡ Daily limit: {daily_limit}")
+            
+            if plan == 'free' and daily_limit > 0:
+                # Try to make multiple analyses to potentially hit limit
+                test_content = {
+                    "content": f"Test analysis {datetime.now().isoformat()}",
+                    "platform": "tiktok"
+                }
+                
+                success, response = self.run_test(
+                    "Analysis within daily limit",
+                    "POST", 
+                    "/analyze/content",
+                    200,
+                    data=test_content,
+                    use_session=True
+                )
+                
+                if success:
+                    remaining = response.get('remaining_today', -1)
+                    print(f"   ⚡ Remaining after analysis: {remaining}")
+                    
+                    # If we're at limit, try one more to test 429 response
+                    if remaining == 0:
+                        print("   🚫 Testing daily limit exceeded...")
+                        limit_success, limit_response = self.run_test(
+                            "Analysis when daily limit exceeded",
+                            "POST",
+                            "/analyze/content", 
+                            429,  # Should get rate limited
+                            data=test_content,
+                            use_session=True
+                        )
+                        return limit_success
+            
+        return True
 
     def test_growth_plan(self):
         """Test growth plan endpoint (mocked data)"""
